@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.TargetApi
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
@@ -17,10 +18,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
-import android.widget.ToggleButton
+import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.view.isVisible
@@ -44,6 +42,11 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler()
     private lateinit var viewManager : RecyclerView.LayoutManager
     private lateinit var recyclerViewAdapter: RecyclerViewAdapter
+
+    private var bleGatt: BluetoothGatt? = null
+    private var mContext:Context? = null    //Toast 아림을 위한 Context 전달
+
+
     private val mLeScanCallback = @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     object : ScanCallback() {
         override fun onScanFailed(errorCode: Int) {
@@ -107,6 +110,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Permission must be grandted", Toast.LENGTH_SHORT).show()
         }
     }
+
     @TargetApi(Build.VERSION_CODES.M)
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,6 +123,15 @@ class MainActivity : AppCompatActivity() {
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView).apply {
             layoutManager = viewManager
             adapter = recyclerViewAdapter
+        }
+
+        mContext = this
+        recyclerViewAdapter.mListener = object : RecyclerViewAdapter.OnItemClickListener{
+            override fun onClick(view: View, position: Int) {
+            scanDevice(false)   //scan중지
+                val device = devicesArr.get(position)
+                bleGatt = DeviceControlActivity(mContext, bleGatt).connectGatt(device)
+            }
         }
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
@@ -167,6 +180,12 @@ class MainActivity : AppCompatActivity() {
 
     class RecyclerViewAdapter(private val myDataset: ArrayList<BluetoothDevice>):
     RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder> () {
+
+        var mListener : OnItemClickListener? = null
+        interface OnItemClickListener{
+            fun onClick(view: View, position: Int)
+        }
+
         class MyViewHolder(val linearView:LinearLayout): RecyclerView.ViewHolder(linearView)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
@@ -181,6 +200,12 @@ class MainActivity : AppCompatActivity() {
             val itemAddress : TextView = holder.linearView.findViewById(R.id.item_address)
             itemName.text = myDataset[position].name
             itemAddress.text = myDataset[position].address
+
+            if (mListener != null){
+                holder?.itemView?.setOnClickListener {v ->
+                    mListener?.onClick(v, position)
+                }
+            }
         }
         override fun getItemCount() = myDataset.size
     }
