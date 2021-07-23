@@ -20,6 +20,7 @@ import android.widget.Toast
  */
 
 private val TAG = "gattClientCallback"
+
 class DeviceControlActivity(private val context: Context?, private var bluetoothGatt: BluetoothGatt?) {
     private var device : BluetoothDevice? = null
     private val gattCallback : BluetoothGattCallback = object  : BluetoothGattCallback() {
@@ -38,6 +39,7 @@ class DeviceControlActivity(private val context: Context?, private var bluetooth
             }
         }
 
+        // 원격 장치에 대한 원격 서비스, 특성 및 설명자 목록이 업데이트 되었을 때 호출되는 콜백
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             super.onServicesDiscovered(gatt, status)
             when (status) {
@@ -48,6 +50,7 @@ class DeviceControlActivity(private val context: Context?, private var bluetooth
             }
         }
 
+        // Toast로 보여줄 메세지를 파라미터로 받아, Handler의 handlerMessage로 나타냄
         private fun broadcastUpdate(str: String) {
             val mHandler : Handler = object : Handler(Looper.getMainLooper()) {
                 override fun handleMessage(msg: Message){
@@ -69,6 +72,7 @@ class DeviceControlActivity(private val context: Context?, private var bluetooth
         }
     }
 
+    // MainActivity에서 호출할 메서드. SDK의 버전에 따라 나눠서 처리
     fun connectGatt(device: BluetoothDevice) : BluetoothGatt? {
         this.device = device
 

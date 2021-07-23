@@ -43,9 +43,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewManager : RecyclerView.LayoutManager
     private lateinit var recyclerViewAdapter: RecyclerViewAdapter
 
+    // BLE Gatt
     private var bleGatt: BluetoothGatt? = null
     private var mContext:Context? = null    //Toast 아림을 위한 Context 전달
-
 
     private val mLeScanCallback = @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     object : ScanCallback() {
@@ -118,24 +118,23 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
+        mContext = this
         viewManager = LinearLayoutManager(this)
+
         recyclerViewAdapter = RecyclerViewAdapter(devicesArr)
+        recyclerViewAdapter.mListener = object : RecyclerViewAdapter.OnItemClickListener{
+            override fun onClick(view: View, position: Int) {
+                scanDevice(false)   //scan중지
+                val device = devicesArr.get(position)
+                bleGatt = DeviceControlActivity(mContext, bleGatt).connectGatt(device)
+            }
+        }
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView).apply {
             layoutManager = viewManager
             adapter = recyclerViewAdapter
         }
 
-        mContext = this
-        recyclerViewAdapter.mListener = object : RecyclerViewAdapter.OnItemClickListener{
-            override fun onClick(view: View, position: Int) {
-            scanDevice(false)   //scan중지
-                val device = devicesArr.get(position)
-                bleGatt = DeviceControlActivity(mContext, bleGatt).connectGatt(device)
-            }
-        }
-
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-
+//        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter != null) {
             if (bluetoothAdapter?.isEnabled == false) {
                 binding.bleOnOffBtn.isChecked = true
@@ -147,15 +146,15 @@ class MainActivity : AppCompatActivity() {
         }
         binding.bleOnOffBtn.setOnCheckedChangeListener { _, isChecked ->
             bluetoothOnOff()
-            binding.scanBtn.visibility = if (binding.scanBtn.visibility == View.VISIBLE) {
-                View.INVISIBLE
-            } else {
-                View.VISIBLE
+            binding.scanBtn.visibility = if (binding.scanBtn.visibility == View.VISIBLE) { View.INVISIBLE } else { View.VISIBLE }
+            if (binding.scanBtn.visibility == View.INVISIBLE){
+                scanDevice(false)
+                devicesArr.clear()
+                recyclerViewAdapter.notifyDataSetChanged()
             }
         }
 
-        binding.scanBtn.setOnClickListener{
-            v:View? -> //Scan Button Onclick
+        binding.scanBtn.setOnClickListener{ v:View? -> //Scan Button Onclick
             if (!hasPermission(this, PERMISSIONS)) {
                 requestPermissions(PERMISSIONS,REQUEST_ALL_PERMISSION)
             }
@@ -182,6 +181,7 @@ class MainActivity : AppCompatActivity() {
     RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder> () {
 
         var mListener : OnItemClickListener? = null
+
         interface OnItemClickListener{
             fun onClick(view: View, position: Int)
         }
